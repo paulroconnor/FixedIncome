@@ -26,12 +26,29 @@ class Currency(Enum):
     # CAD = 'Canadian Dollar'
 
 class InterpolationType(Enum):
-    SPOT = 'Spot'
-    DISCOUNT = 'Discount'
-    FORWARD = 'Forward'
+    SPOT = 'Spot Rate'
+    DISCOUNT = 'Discount Factor'
+    FORWARD = 'Forward Rate'
 
 class Calendar(Enum):
     US = 'SIFMAUS'
     UK = 'SIFMAUK'
     JP = 'SIFMAJP'
     EU = 'EUREX_Bond'
+
+class Frequency(Enum):
+    WEEKLY = 'Weekly'
+    MONTHLY = 'Monthly'
+    QUARTERLY = 'Quarterly'
+    SEMIANNUAL = 'Semi-Annual'
+    ANNUAL = 'Annual'
+
+class Convention(Enum):
+    DC30360 = '30/360'
+    DC30U360 = '30U/360'
+    DC30E360 = '30E/360'
+    DC30B360 = '30B/360'
+    DCACTACT = 'Actual/Actual'
+    DCACT365 = 'Actual/365'
+    DCACT364 = 'Actual/364'
+    DCACT360 = 'Actual/360'
