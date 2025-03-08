@@ -72,9 +72,3 @@ class Bond:
         plt.ylabel(type)
         plt.grid(True, axis = 'y')
         plt.show()
-        
-        
-# b = Bond(facevalue = 100, couponrate = 0.10, frequency = 'Monthly', maturitydate = '2025-01-13', valuationdate = '2024-06-18', compounding = 'Semi-Annual', convention = 'Actual/Actual', region = 'United States')
-# print(b.price)
-# print(b.valuationtable)
-# b.plot(type = 'Present Value')
