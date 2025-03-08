@@ -19,20 +19,20 @@ def nelsonsiegelsvensson(time, beta0, beta1, beta2, beta3, lambda0, lambda1):
 
     return beta0 + beta1 * term1 + beta2 * term2 + beta3 * term3
 
-def discount(time, rate, compounding = 'continuous'):
-    if compounding == 'continuous':
+def discount(time, rate, compounding = 'Continuous'):
+    if compounding == 'Continuous':
         return np.exp(-rate * time)
     else:
-        COMPOUNDMAP = {'Monthly':1,'Quarterly':4,'Semi-Annual':2,'Annual':1}
+        COMPOUNDMAP = {'Weekly':52,'Bi-Weekly':26,'Monthly':12,'Quarterly':4,'Semi-Annual':2,'Annual':1}
         return (1 + rate / COMPOUNDMAP[compounding]) ** (-time * COMPOUNDMAP[compounding])
     
-def forward(timeA, rateA, timeB, rateB, compounding = 'continuous'):
+def forward(timeA, rateA, timeB, rateB, compounding = 'Continuous'):
     if timeA >= timeB:
         raise ValueError('timeA must be less than timeB')
     
-    if compounding == 'continuous':
+    if compounding == 'Continuous':
         return (rateB * timeB - rateA * timeA) / (timeB - timeA)
     else:
-        COMPOUNDMAP = {'Monthly':1,'Quarterly':4,'Semi-Annual':2,'Annual':1}
+        COMPOUNDMAP = {'Weekly':52,'Bi-Weekly':26,'Monthly':12,'Quarterly':4,'Semi-Annual':2,'Annual':1}
         k = COMPOUNDMAP[compounding]
         return (k * (((1 + rateB / k) ** timeB) / ((1 + rateA / k) ** timeA)) ** (1 / (timeB - timeA))) - k
