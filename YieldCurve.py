@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import ustreasurycurve as ustc
 import warnings
-from fixedincome import nelsonsiegelsvensson, discount, forward
+from fixedincomeutils import nelsonsiegelsvensson, discount, forward
 from scipy.optimize import curve_fit
 from enums import Compounding, Region, Currency, InterpolationType
 
