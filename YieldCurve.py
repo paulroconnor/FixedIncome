@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import ustreasurycurve as ustc
 import warnings
-from fixedincomeutils import nelsonsiegelsvensson, discount, forward 
-from validation import validate_enum, default_calendar, default_currency, validate_date
+import fixedincomeutils as fi
+import validation as v
 from scipy.optimize import curve_fit
 from enums import Compounding, Region, Currency, InterpolationType, Calendar
 
@@ -13,11 +13,11 @@ from enums import Compounding, Region, Currency, InterpolationType, Calendar
 class YieldCurve:
 
     def __init__(self, region, date, compounding, currency = None, calendar = None):
-        self.region = validate_enum(region, Region, 'region')
-        self.currency = validate_enum(currency, Currency, 'currency') if currency else default_currency(self.region)
-        self.calendar = validate_enum(calendar, Calendar, 'calendar') if calendar else default_calendar(self.region)
-        self.compounding = validate_enum(compounding, Compounding, 'compounding')
-        self.date = validate_date(date, self.calendar)
+        self.region = v.validate_enum(region, Region, 'region')
+        self.currency = v.validate_enum(currency, Currency, 'currency') if currency else v.default_currency(self.region)
+        self.calendar = v.validate_enum(calendar, Calendar, 'calendar') if calendar else v.default_calendar(self.region)
+        self.compounding = v.validate_enum(compounding, Compounding, 'compounding')
+        self.date = v.validate_date(date, self.calendar)
         print(self.__repr__())
         self.spotrates = self._load_spots()
         self.nssparams = self._calculate_params()
@@ -29,7 +29,6 @@ class YieldCurve:
 
     def _load_spots(self):
         TENORMAP = {'1m':1/12,'2m':1/6,'3m':0.25,'6m':0.5,'1y':1,'2y':2,'3y':3,'5y':5,'10y':10,'20y':20,'30y':30}
-
         if self.region == Region.US:
             warnings.simplefilter('ignore', category = UserWarning)
             ts = ustc.nominalRates(date_start = self.date, date_end = self.date)
@@ -44,33 +43,27 @@ class YieldCurve:
         if initial is None:
             initial = [0.03, -0.02, 0.01, 0.05, 2.0, 5.0]        
         try:
-            return curve_fit(nelsonsiegelsvensson, ts['time'], ts['spot'], p0 = initial)[0]
+            return curve_fit(fi.nelsonsiegelsvensson, ts['time'], ts['spot'], p0 = initial)[0]
         except (RuntimeError, ValueError) as e:
             warnings.warn(f'Curve fitting failed: {e}', RuntimeWarning)
         return None
 
     
     def interpolate(self, t, type):
-        try:
-            type = InterpolationType(type)
-        except ValueError:
-            valid_types = ', '.join(e.value for e in InterpolationType)
-            raise ValueError(f'Invalid type: {type}. Choose from {valid_types}')
-        
+        type = v.validate_enum(type, InterpolationType, 'type')
         if type == InterpolationType.SPOT:
-            return nelsonsiegelsvensson(t, *self.nssparams)
+            return fi.nelsonsiegelsvensson(t, *self.nssparams)
         elif type == InterpolationType.DISCOUNT:
-            return discount(t, nelsonsiegelsvensson(t, *self.nssparams), self.get_compounding())
+            return fi.discount(t, fi.nelsonsiegelsvensson(t, *self.nssparams), self.compounding)
         elif type == InterpolationType.FORWARD:
-            spots = nelsonsiegelsvensson(t, *self.nssparams)
-            return [forward(timeA = t[i], rateA = spots[i], timeB = t[i] + 1, rateB = nelsonsiegelsvensson(t[i] + 1, *self.nssparams), compounding = self.compounding) for i in range(len(t))]
+            spots = fi.nelsonsiegelsvensson(t, *self.nssparams)
+            return [fi.forward(timeA = t[i], rateA = spots[i], timeB = t[i] + 1, rateB = fi.nelsonsiegelsvensson(t[i] + 1, *self.nssparams), compounding = self.compounding) for i in range(len(t))]
     
 
-    def plot(self, type = 'spot'):
+    def plot(self, type):
         PLOTSTYLE = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}
         sns.set_style('whitegrid', rc = PLOTSTYLE)
-        COLORMAP = {'spot':'#4062BB','discount':'#357266','forward':'#FF495C'}
-        TITLEMAP = {'spot':'Spot Rate','discount':'Discount Factor','forward':'Forward Rate'}
+        COLORMAP = {'Spot Rate':'#4062BB','Discount Factor':'#357266','Forward Rate':'#FF495C'}
         ts = self.spotrates
         ts[type] = self.interpolate(ts['time'], type)
         t = np.linspace(0, np.max(ts['time']), 100)
@@ -78,16 +71,16 @@ class YieldCurve:
         plt.figure(figsize = (12,8))
         sns.lineplot(x = t, y = y, linestyle = '-', linewidth = 2, color = COLORMAP[type])
         sns.scatterplot(x = ts['time'], y = ts[type], marker = 'o', s = 75, color = COLORMAP[type]) 
-        plt.title(f'{self.region} {TITLEMAP[type]} Term Structure ({self.date})')
+        plt.title(f'{self.region.value} {type} Term Structure ({self.date.date()})')
         plt.xlabel('Maturity')
-        plt.ylabel(TITLEMAP[type])
+        plt.ylabel(type)
         plt.grid(True, axis = 'y')
         plt.show()
 
 
     
-# yc = YieldCurve('United States','2025-01-13', compounding = 'Continuous')
+# yc = YieldCurve(region = 'United States', date = '2025-01-13', compounding = 'Continuous')
 # print(yc.spotrates)
-# yc.plot(type = 'spot')
-# yc.plot(type = 'discount')
-# yc.plot(type = 'forward')	
+# yc.plot(type = 'Spot Rate')
+# yc.plot(type = 'Discount Factor')
+# yc.plot(type = 'Forward Rate')	
