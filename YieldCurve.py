@@ -1,44 +1,36 @@
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import ustreasurycurve as ustc
 import warnings
-from fixedincomeutils import nelsonsiegelsvensson, discount, forward
+from fixedincomeutils import nelsonsiegelsvensson, discount, forward 
+from validation import validate_enum, default_calendar, default_currency, validate_date
 from scipy.optimize import curve_fit
-from enums import Compounding, Region, Currency, InterpolationType
+from enums import Compounding, Region, Currency, InterpolationType, Calendar
 
 
 
 class YieldCurve:
 
-    def __init__(self, region, currency, date, compounding = Compounding.CONTINUOUS):
-        # Validate region
-        self.region = self._validate_enum(region, Region, 'region')
-        self.currency = self._validate_enum(currency, Currency, 'currency')
-        self.compounding = self._validate_enum(compounding, Compounding, 'compounding')
-        self.date = date
+    def __init__(self, region, date, compounding, currency = None, calendar = None):
+        self.region = validate_enum(region, Region, 'region')
+        self.currency = validate_enum(currency, Currency, 'currency') if currency else default_currency(self.region)
+        self.calendar = validate_enum(calendar, Calendar, 'calendar') if calendar else default_calendar(self.region)
+        self.compounding = validate_enum(compounding, Compounding, 'compounding')
+        self.date = validate_date(date, self.calendar)
         print(self.__repr__())
         self.spotrates = self._load_spots()
         self.nssparams = self._calculate_params()
 
+
     def __repr__(self):
-        return f'YieldCurve(region = {self.region}, currency = {self.currency}, date = {self.date}, compounding = {self.compounding})'
-    
-    def __str__(self):
-        return f'{self.region} Yield Curve ({self.date})'
-    
-    def _validate_enum(self, value, enum_class, name):
-        try:
-            return enum_class(value) if isinstance(value, str) else value
-        except ValueError:
-            valid_values = ', '.join(e.value for e in enum_class)
-            raise ValueError(f'Invalid {name}: {value}. Choose from {valid_values}')
+        return f'YieldCurve(region = {self.region.value}, date = {self.date.date()}, compounding = {self.compounding.value}, currency = {self.currency.value}, calendar = {self.calendar.value})'
+
 
     def _load_spots(self):
         TENORMAP = {'1m':1/12,'2m':1/6,'3m':0.25,'6m':0.5,'1y':1,'2y':2,'3y':3,'5y':5,'10y':10,'20y':20,'30y':30}
 
-        if self.region == 'United States':
+        if self.region == Region.US:
             warnings.simplefilter('ignore', category = UserWarning)
             ts = ustc.nominalRates(date_start = self.date, date_end = self.date)
             warnings.simplefilter('default', category = UserWarning)
@@ -46,6 +38,7 @@ class YieldCurve:
             ts['time'] = ts['tenor'].map(TENORMAP)
             return ts[['tenor','time','spot']].dropna()
         
+
     def _calculate_params(self, initial = None):
         ts = self.spotrates
         if initial is None:
@@ -72,6 +65,7 @@ class YieldCurve:
             spots = nelsonsiegelsvensson(t, *self.nssparams)
             return [forward(timeA = t[i], rateA = spots[i], timeB = t[i] + 1, rateB = nelsonsiegelsvensson(t[i] + 1, *self.nssparams), compounding = self.compounding) for i in range(len(t))]
     
+
     def plot(self, type = 'spot'):
         PLOTSTYLE = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}
         sns.set_style('whitegrid', rc = PLOTSTYLE)
@@ -92,8 +86,8 @@ class YieldCurve:
 
 
     
-# yc = YieldCurve('United States','USD','2020-01-02')
-# print(yc.get_spotrates())
+# yc = YieldCurve('United States','2025-01-13', compounding = 'Continuous')
+# print(yc.spotrates)
 # yc.plot(type = 'spot')
 # yc.plot(type = 'discount')
 # yc.plot(type = 'forward')	
