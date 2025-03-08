@@ -80,12 +80,3 @@ class InterestRateSwap:
         plt.grid(True, axis = 'y')
         plt.legend(frameon = False, loc = 'lower center', bbox_to_anchor = (0.5, -0.125), ncol = 2)
         plt.show()
-
-    
-# s = InterestRateSwap(notional = 100, fixedrate = 0.05, frequency = 'Monthly', maturitydate = '2025-01-13', valuationdate = '2024-06-18', compounding = 'Semi-Annual', convention = 'Actual/Actual', region = 'United States')
-# print(s.fixedprice)
-# print(s.floatingprice)
-# print(s.npv)
-# print(s.fixedvaluationtable)
-# print(s.floatingvaluationtable)
-# s.plot(type = 'Present Value')
