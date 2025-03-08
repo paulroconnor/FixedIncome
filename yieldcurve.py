@@ -76,11 +76,3 @@ class YieldCurve:
         plt.ylabel(type)
         plt.grid(True, axis = 'y')
         plt.show()
-
-
-    
-# yc = YieldCurve(region = 'United States', date = '2025-01-13', compounding = 'Continuous')
-# print(yc.spotrates)
-# yc.plot(type = 'Spot Rate')
-# yc.plot(type = 'Discount Factor')
-# yc.plot(type = 'Forward Rate')	
