@@ -4,40 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import ustreasurycurve as ustc
 import warnings
-from rates import nelsonsiegelsvensson, discount, forward
+from fixedincome import nelsonsiegelsvensson, discount, forward
 from scipy.optimize import curve_fit
-from enum import Enum
-
-
-class Region(Enum):
-    US = 'United States'
-    # EU = 'European Union'
-    # JP = 'Japan'
-    # CN = 'China'
-    # GB = 'United Kingdom'
-    # CA = 'Canada'
-
-class Currency(Enum):
-    USD = 'United States Dollar'
-    # EUR = 'Euro'
-    # JPY = 'Japanese Yen'
-    # CNY = 'Chinese Yuan'
-    # GBP = 'British Pound'
-    # CAD = 'Canadian Dollar'
-
-class Compounding(Enum):
-    CONTINUOUS = 'Continuous'
-    WEEKLY = 'Weekly'
-    BIWEEKLY = 'Bi-Weekly'
-    MONTHLY = 'Monthly'
-    QUARTERLY = 'Quarterly'
-    SEMIANNUAL = 'Semi-Annual'
-    ANNUAL = 'Annual'
-
-class InterpolationType(Enum):
-    SPOT = 'Spot'
-    DISCOUNT = 'Discount'
-    FORWARD = 'Forward'
+from enums import Compounding, Region, Currency, InterpolationType
 
 
 
@@ -45,26 +14,9 @@ class YieldCurve:
 
     def __init__(self, region, currency, date, compounding = Compounding.CONTINUOUS):
         # Validate region
-        try:
-            self.region = Region(region) if isinstance(region, str) else region
-        except ValueError:
-            valid_regions = ', '.join(e.value for e in Region)
-            raise ValueError(f'Invalid region: {region}. Choose from {valid_regions}')
-
-        # Validate currency
-        try:
-            self.currency = Currency(currency) if isinstance(currency, str) else currency
-        except ValueError:
-            valid_currencies = ', '.join(e.value for e in Currency)
-            raise ValueError(f'Invalid currency: {currency}. Choose from {valid_currencies}')
-
-        # Validate compounding
-        try:
-            self.compounding = Compounding(compounding) if isinstance(compounding, str) else compounding
-        except ValueError:
-            valid_compoundings = ', '.join(e.value for e in Compounding)
-            raise ValueError(f'Invalid compounding type: {compounding}. Choose from {valid_compoundings}')
-        
+        self.region = self._validate_enum(region, Region, 'region')
+        self.currency = self._validate_enum(currency, Currency, 'currency')
+        self.compounding = self._validate_enum(compounding, Compounding, 'compounding')
         self.date = date
         print(self.__repr__())
         self.spotrates = self._load_spots()
@@ -76,6 +28,13 @@ class YieldCurve:
     def __str__(self):
         return f'{self.region} Yield Curve ({self.date})'
     
+    def _validate_enum(self, value, enum_class, name):
+        try:
+            return enum_class(value) if isinstance(value, str) else value
+        except ValueError:
+            valid_values = ', '.join(e.value for e in enum_class)
+            raise ValueError(f'Invalid {name}: {value}. Choose from {valid_values}')
+
     def _load_spots(self):
         TENORMAP = {'1m':1/12,'2m':1/6,'3m':0.25,'6m':0.5,'1y':1,'2y':2,'3y':3,'5y':5,'10y':10,'20y':20,'30y':30}
 
@@ -89,15 +48,13 @@ class YieldCurve:
         
     def _calculate_params(self, initial = None):
         ts = self.spotrates
-
         if initial is None:
-            initial = [0.03, -0.02, 0.01, 0.05, 2.0, 5.0]
-        
+            initial = [0.03, -0.02, 0.01, 0.05, 2.0, 5.0]        
         try:
             return curve_fit(nelsonsiegelsvensson, ts['time'], ts['spot'], p0 = initial)[0]
-        except RuntimeError:
-            warnings.warn('Curve fitting failed to converge. Returning None.', RuntimeWarning)
-            return None
+        except (RuntimeError, ValueError) as e:
+            warnings.warn(f'Curve fitting failed: {e}', RuntimeWarning)
+        return None
 
     
     def interpolate(self, t, type):
@@ -116,8 +73,8 @@ class YieldCurve:
             return [forward(timeA = t[i], rateA = spots[i], timeB = t[i] + 1, rateB = nelsonsiegelsvensson(t[i] + 1, *self.nssparams), compounding = self.compounding) for i in range(len(t))]
     
     def plot(self, type = 'spot'):
-        custom = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}
-        sns.set_style('whitegrid', rc = custom)
+        PLOTSTYLE = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}
+        sns.set_style('whitegrid', rc = PLOTSTYLE)
         COLORMAP = {'spot':'#4062BB','discount':'#357266','forward':'#FF495C'}
         TITLEMAP = {'spot':'Spot Rate','discount':'Discount Factor','forward':'Forward Rate'}
         ts = self.spotrates
