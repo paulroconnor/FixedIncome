@@ -13,19 +13,25 @@ class Region(Enum):
     US = 'United States'
     EU = 'European Union'
     JP = 'Japan'
-    CN = 'China'
-    GB = 'United Kingdom'
-    CA = 'Canada'
+    UK = 'United Kingdom'
+    # CA = 'Canada'
+    # CN = 'China'
 
 class Currency(Enum):
     USD = 'United States Dollar'
     EUR = 'Euro'
     JPY = 'Japanese Yen'
-    CNY = 'Chinese Yuan'
     GBP = 'British Pound'
-    CAD = 'Canadian Dollar'
+    # CNY = 'Chinese Yuan'
+    # CAD = 'Canadian Dollar'
 
 class InterpolationType(Enum):
     SPOT = 'Spot'
     DISCOUNT = 'Discount'
     FORWARD = 'Forward'
+
+class Calendar(Enum):
+    US = 'SIFMAUS'
+    UK = 'SIFMAUK'
+    JP = 'SIFMAJP'
+    EU = 'EUREX_Bond'
