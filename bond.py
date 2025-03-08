@@ -53,13 +53,14 @@ class Bond:
         return cashflows @ discountfactors
 
     def _valuationtable(self):
-        return pd.DataFrame({
+        table = pd.DataFrame({
             'Payment Date': self.paymentdates,
             'Time': self.paymenttimes,
             'Cash Flow': self.cashflows,
             'Discount Factor': self.discountfactors,
             'Present Value': self.cashflows * self.discountfactors
         })
+        return table[table['Cash Flow'] != 0].reset_index(drop = True)
     
     def plot(self, type):
         PLOTSTYLE = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}
@@ -73,7 +74,7 @@ class Bond:
         plt.show()
         
         
-# b = Bond(facevalue = 100, couponrate = 0.25, frequency = 'Monthly', maturitydate = '2025-01-13', valuationdate = '2024-06-18', compounding = 'Semi-Annual', convention = 'Actual/Actual', region = 'United States')
-# # print(b.price)
-# # print(b.valuationtable)
+# b = Bond(facevalue = 100, couponrate = 0.10, frequency = 'Monthly', maturitydate = '2025-01-13', valuationdate = '2024-06-18', compounding = 'Semi-Annual', convention = 'Actual/Actual', region = 'United States')
+# print(b.price)
+# print(b.valuationtable)
 # b.plot(type = 'Present Value')
