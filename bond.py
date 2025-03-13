@@ -27,6 +27,8 @@ class Bond:
         self.discountfactors = self._discountfactors()
         self.price = self._price()
         self.valuationtable = self._valuationtable()
+        self.duration = self._duration()
+        self.convexity = self._convexity()
 
     def __repr__(self):
         return f'Bond(facevalue = {self.facevalue:,}, couponrate = {self.couponrate :.2%}, frequency = {self.frequency.value}, maturitydate = {self.maturitydate.date()}, valuationdate = {self.valuationdate.date()}, region = {self.region.value}, currency = {self.currency.value}, compounding = {self.compounding.value}, calendar = {self.calendar.value}, convention = {self.convention.value})'
@@ -61,6 +63,30 @@ class Bond:
             'Present Value': self.cashflows * self.discountfactors
         })
         return table[table['Cash Flow'] != 0].reset_index(drop = True)
+    
+    def _duration(self):
+        duration = 0
+        if self.compounding == Compounding.CONTINUOUS:
+            for i, cf in enumerate(self.cashflows):
+                duration += self.paymenttimes[i] * cf * self.discountfactors(i) / self.price
+        else:
+            k = fi.COMPOUND_MAP.get(self.compounding, None)
+            rates = self.yieldcurve.interpolate(self.paymenttimes, 'Spot Rate')
+            for i, cf in enumerate(self.cashflows):
+                duration += ((-self.paymenttimes[i] / k) * cf * (1 + rates[i] / k) ** (-self.paymenttimes[i] - 1)) / self.price
+        return duration
+    
+    def _convexity(self):
+        convexity = 0
+        if self.compounding == Compounding.CONTINUOUS:
+            for i, cf in enumerate(self.cashflows):
+                convexity += (self.paymenttimes[i] ** 2) * cf * self.discountfactors(i) / self.price
+        else:
+            k = fi.COMPOUND_MAP.get(self.compounding, None)
+            rates = self.yieldcurve.interpolate(self.paymenttimes, 'Spot Rate')
+            for i, cf in enumerate(self.cashflows):
+                convexity += ((self.paymenttimes[i] * (self.paymenttimes[i] + 1)) * (1 / k ** 2) * cf * (1 + rates[i] / k) ** (-self.paymenttimes[i] - 2)) / self.price
+        return convexity
     
     def plot(self, type):
         PLOTSTYLE = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}

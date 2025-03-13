@@ -31,6 +31,10 @@ class InterestRateSwap:
         self.npv = self.fixedprice - self.floatingprice
         self.fixedvaluationtable = self._valuationtable('Fixed')
         self.floatingvaluationtable = self._valuationtable('Floating')
+        self.fixedduration = self._duration('Fixed')
+        self.floatingduration = self._duration('Floating')
+        self.fixedconvexity = self._convexity('Fixed')
+        self.floatingconvexity = self._convexity('Floating')
     
     def __repr__(self):
         return f'InterestRateSwap(notional = {self.notional:,}, fixedrate = {self.fixedrate :.2%}, frequency = {self.frequency.value}, maturitydate = {self.maturitydate.date()}, valuationdate = {self.valuationdate.date()}, region = {self.region.value}, currency = {self.currency.value}, compounding = {self.compounding.value}, calendar = {self.calendar.value}, convention = {self.convention.value})'
@@ -67,6 +71,34 @@ class InterestRateSwap:
             'Discount Factor': self.discountfactors,
             'Present Value': (self.fixedcashflows if leg == 'Fixed' else self.floatingcashflows) * self.discountfactors
         })
+    
+    def _duration(self, leg):
+        cashflows = self.fixedcashflows if leg == 'Fixed' else self.floatingcashflows
+        price = self.fixedprice if leg == 'Fixed' else self.floatingprice
+        duration = 0
+        if self.compounding == Compounding.CONTINUOUS:
+            for i, cf in enumerate(cashflows):
+                duration += self.paymenttimes[i] * cf * self.discountfactors(i) / price
+        else:
+            k = fi.COMPOUND_MAP.get(self.compounding, None)
+            rates = self.yieldcurve.interpolate(self.paymenttimes, 'Spot Rate')
+            for i, cf in enumerate(cashflows):
+                duration += ((-self.paymenttimes[i] / k) * cf * (1 + rates[i] / k) ** (-self.paymenttimes[i] - 1)) / price
+        return duration
+    
+    def _convexity(self, leg):
+        cashflows = self.fixedcashflows if leg == 'Fixed' else self.floatingcashflows
+        price = self.fixedprice if leg == 'Fixed' else self.floatingprice
+        convexity = 0
+        if self.compounding == Compounding.CONTINUOUS:
+            for i, cf in enumerate(cashflows):
+                convexity += (self.paymenttimes[i] ** 2) * cf * self.discountfactors(i) / price
+        else:
+            k = fi.COMPOUND_MAP.get(self.compounding, None)
+            rates = self.yieldcurve.interpolate(self.paymenttimes, 'Spot Rate')
+            for i, cf in enumerate(cashflows):
+                convexity += ((self.paymenttimes[i] * (self.paymenttimes[i] + 1)) * (1 / k ** 2) * cf * (1 + rates[i] / k) ** (-self.paymenttimes[i] - 2)) / price
+        return convexity
     
     def plot(self, type):
         PLOTSTYLE = {'axes.edgecolor':'#505258', 'grid.linestyle':'dashed', 'grid.color':'white', 'axes.facecolor':'#E8E9EB'}
